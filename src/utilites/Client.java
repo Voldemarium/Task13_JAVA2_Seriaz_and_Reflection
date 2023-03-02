@@ -1,10 +1,11 @@
 package utilites;
 
-public class Client  {//implements Serializable
+import java.io.Serializable;
+
+public class Client  implements Serializable {//implements Serializable
     private int salary;
     private Person person;
     private int costProperty;
-
 
 
     public Client(int salary, Person person, int costProperty){

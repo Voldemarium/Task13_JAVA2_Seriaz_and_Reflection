@@ -1,6 +1,8 @@
 package utilites;
 
-public class Person {//implements Serializable
+import java.io.Serializable;
+
+public class Person implements Serializable {//implements Serializable
     private String name;
     private Person2 person2;
     private int age;
