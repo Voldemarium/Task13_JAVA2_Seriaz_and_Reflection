@@ -1,13 +1,13 @@
 package utilites;
 
-public class Person {//implements Serializable
+public class Person  {//
     private String name;
-    private Person2 person2;
+    private Phone phone;
     private int age;
 
-    public Person(String name, Person2 person2, int age) {
+    public Person(String name, Phone phone, int age) {
         this.name = name;
-        this.person2 = person2;
+        this.phone = phone;
         this.age = age;
     }
 
@@ -15,7 +15,7 @@ public class Person {//implements Serializable
     public String toString() {
         return "Person{" +
                 "name='" + name + '\'' +
-                ", person2=" + person2 +
+                ", person2=" + phone +
                 ", age=" + age +
                 '}';
     }

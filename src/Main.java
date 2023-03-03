@@ -1,103 +1,124 @@
 import utilites.Client;
 import utilites.Person;
-import utilites.Person2;
+import utilites.Phone;
 
 import java.io.*;
 import java.lang.reflect.Field;
 
 public class Main {
-    public static void main(String[] args) {
-//        Person person = new Person("Vova", 56);
-        Person2 person2 = new Person2("Kolja", 56);
-        Person person = new Person("Vladimir", person2, 45);
+	public static void main(String[] args) {
+		Phone phone1 = new Phone(12354, "Samsung");
+		Phone phoneNull = new Phone(0, null);
+		Person person = new Person("Vladimir", phone1, 45);
+		Person personNull = new Person(null, phoneNull, 0);
+		Client client = new Client(20_000, person, 2_000_000);
+		Client clientNull = new Client(0, personNull, 0);
 
-        Client client = new Client(20_000, person, 2_000_000);
+		File myFile = new File("myFile.txt");   //создаем файл (пустой)
 
-        File myClient = new File("myClient.txt");   //создаем файл (пустой)
-        ObjectOutputStream objOut = null;
-        try {
-            objOut = new ObjectOutputStream(new FileOutputStream(myClient));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+		//1.  Сериализация объекта
+		ObjectOutputStream objOut = null;
+		try {
+			objOut = new ObjectOutputStream(new FileOutputStream(myFile));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		myWriteObject(phone1, objOut);
+		myWriteObject(person, objOut);
+		myWriteObject(client, objOut);
 
-        myWriteObject(client, objOut);
+		//2.  Десериализация объекта
+		ObjectInputStream objInput;
+		try {
+			objInput = new ObjectInputStream(new FileInputStream("myFile.txt"));
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+		Phone phone2 = (Phone) myReadObject(phoneNull, objInput);
+		System.out.println("phone2: " + phone2);
 
-        Client client2 = (Client) myReadObject("myClient.txt");    //создадим новый обьект client2 (данные загрузим из файла)
-        System.out.println("client2: " + client2);
+		Person person2 = (Person) myReadObject(personNull, objInput);
+		System.out.println("person2: " + person2);
 
-    }
+		Client client2 = (Client) myReadObject(clientNull, objInput);    //создадим новый обьект client2 (данные загрузим из файла)
+		System.out.println("client2: " + client2);
+	}
 
-    //статический метод сериализации
-    static public void myWriteObject(Object object, ObjectOutputStream objOut) {
-        Class<?> clazz = object.getClass();
-        //проверяем класс обьекта на сериализуемость
-        boolean serializable = checkingForSerializable(clazz);
+	//статический метод сериализации
+	static public void myWriteObject(Object object, ObjectOutputStream objOut) {
+		Class<?> clazz = object.getClass();
+		//проверяем класс обьекта на сериализуемость
+		boolean serializable = checkingForSerializable(clazz);
+		if (serializable) {                    //Если обьект сериализуемый
+			try {
+				objOut.writeObject(object);
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
+		} else {                    //Если обьект несериализуемый
+			//проверяем поля обьекта на сериализуемость
+			Field[] fields = clazz.getDeclaredFields();
+			for (Field field : fields) {
+				field.setAccessible(true);
+				Class<?> clazzField = field.getType();
+				//проверяем класс полей обьекта на сериализуемость
+				boolean serializableField = checkingForSerializable(clazzField);
+				try {
+					if (serializableField) { // если поле сериализуемо
+						objOut.writeObject(field.get(object));            //записываем обьект-поле в файл
+					} else {                // если поле несериализуемо
+						myWriteObject(field.get(object), objOut);   // рекурсия
+					}
+				} catch (IllegalAccessException | IOException e) {
+					throw new RuntimeException(e);
+				}
+			}
+		}
+	}
 
-        if (serializable && clazz.getName().equals("ObjectSerializableProxy")) {// Если обьект = ObjectSerializableProxy
-            try {
-                objOut.writeObject(object);           //запись обьекта (ручная сериализация из класса ObjectSerializableProxy
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        } else if (serializable) {                    //Если обьект сериализуемый, но не ObjectSerializableProxy
-            Field[] fields = clazz.getDeclaredFields();
-            boolean serializableField = false;
+	//статический метод десериализации
+	static public Object myReadObject(Object object, ObjectInputStream objInput) {
+		Class<?> clazz = object.getClass();
+		boolean serializable = checkingForSerializable(clazz);
+		if (serializable) {                    //Если обьект сериализуемый
+			try {
+				object = objInput.readObject();       //чтение данных из objInput (из файла "myFile.txt")
+			} catch (ClassNotFoundException | IOException e) {
+				e.printStackTrace();
+			}
+		} else {
+			Field[] fields = clazz.getDeclaredFields();
+			for (Field field : fields) {
+				field.setAccessible(true);
+				Class<?> clazzField = field.getType();
+				//проверяем класс полей обьекта на сериализуемость
+				boolean serializableField = checkingForSerializable(clazzField);
+				try {
+					if (serializableField) {                       // если поле сериализуемо
+						field.set(object, objInput.readObject());  //читаем из файла обьект-поле и перезаписываем поле объекта
+					} else {                                       // если поле несериализуемо
+						myReadObject(field.get(object), objInput); // рекурсия с объектом запрашиваемого типа
+					}
+				} catch (IllegalAccessException | IOException | ClassNotFoundException e) {
+					throw new RuntimeException(e);
+				}
+			}
+		}
+		return object;
+	}
 
-            for (Field field : fields) {
-                Class<?> clazzField = field.getType();
-                //проверяем класс полей обьекта на сериализуемость
-                serializableField = checkingForSerializable(clazzField);
-                if (!serializableField) {
-                    break;
-                }
-            }
-            if (!serializableField) {
-                ObjectSerializableProxy objectSerializableProxy = new ObjectSerializableProxy(object);
-                myWriteObject(objectSerializableProxy, objOut);    //РЕКУРСИЯ
-            } else {
-                try {
-                    objOut.writeObject(object);   // запись обьекта (стандартная сериализация)
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-            //Если обьект не имеет интерфейса Serializable, заворачиваем его в ObjectSerializableProxy
-        } else {
-            ObjectSerializableProxy objectSerializableProxy = new ObjectSerializableProxy(object);
-            myWriteObject(objectSerializableProxy, objOut);    //РЕКУРСИЯ
-        }
-    }
+	//статический метод проверки класса на сериализуемость
+	static public boolean checkingForSerializable(Class<?> clazz) {
+		boolean serializable = clazz.isPrimitive();
 
-    //статический метод десериализации из файла
-    static public Object myReadObject(String file) {
-        Object object = null;
-        try (ObjectInputStream objInput = new ObjectInputStream(new FileInputStream(file))) {
-            object = objInput.readObject();       //чтение данных из objInput (из файла file)
-        } catch (ClassNotFoundException | IOException e) {
-            e.printStackTrace();
-        }
-        assert object != null;
-        Class<?> clazz = object.getClass();
-        if (clazz.getName().equals("ObjectSerializableProxy")) {  //Если класс обьекта - ObjectSerializableProxy
-            object = ((ObjectSerializableProxy) object).getObject();
-        }
-        return object;
-    }
-
-    //статический метод проверки класса на сериализуемость
-    static public boolean checkingForSerializable(Class<?> clazz) {
-        //При clazz.getSuperclass() == null (в случае примитивов) это поле является сериализуемым
-        boolean serializable = clazz.getSuperclass() == null;
-
-        Class<?>[] ifs = clazz.getInterfaces();  //список интерфейсов
-        for (
-                Class<?> ifc : ifs) {
-            if (ifc.getName().equals("java.io.Serializable")) {
-                serializable = true;
-                break;
-            }
-        }
-        return serializable;
-    }
+		Class<?>[] ifs = clazz.getInterfaces();  //список интерфейсов
+		for (
+				Class<?> ifc : ifs) {
+			if (ifc.getName().equals("java.io.Serializable")) {
+				serializable = true;
+				break;
+			}
+		}
+		return serializable;
+	}
 }

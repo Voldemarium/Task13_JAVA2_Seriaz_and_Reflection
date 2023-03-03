@@ -1,11 +1,9 @@
 package utilites;
 
-public class Client  {//implements Serializable
+public class Client {//
     private int salary;
     private Person person;
     private int costProperty;
-
-
 
     public Client(int salary, Person person, int costProperty){
         this.salary = salary;
