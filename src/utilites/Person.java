@@ -15,7 +15,7 @@ public class Person  {//
     public String toString() {
         return "Person{" +
                 "name='" + name + '\'' +
-                ", person2=" + phone +
+                ", phone=" + phone +
                 ", age=" + age +
                 '}';
     }

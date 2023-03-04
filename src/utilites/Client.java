@@ -9,12 +9,11 @@ public class Client {//
         this.salary = salary;
         this.person = person;
         this.costProperty = costProperty;
-
     }
 
     @Override
     public String toString() {
-        return "utilites.Client{" +
+        return "Client{" +
                 "salary=" + salary +
                 ", person=" + person +
                 ", costProperty=" + costProperty +

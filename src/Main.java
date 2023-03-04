@@ -8,11 +8,8 @@ import java.lang.reflect.Field;
 public class Main {
 	public static void main(String[] args) {
 		Phone phone1 = new Phone(12354, "Samsung");
-		Phone phoneNull = new Phone(0, null);
 		Person person = new Person("Vladimir", phone1, 45);
-		Person personNull = new Person(null, phoneNull, 0);
 		Client client = new Client(20_000, person, 2_000_000);
-		Client clientNull = new Client(0, personNull, 0);
 
 		File myFile = new File("myFile.txt");   //создаем файл (пустой)
 
@@ -34,6 +31,11 @@ public class Main {
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
+
+		Phone phoneNull = new Phone(0, null);
+		Person personNull = new Person(null, phoneNull, 0);
+		Client clientNull = new Client(0, personNull, 0);
+
 		Phone phone2 = (Phone) myReadObject(phoneNull, objInput);
 		System.out.println("phone2: " + phone2);
 
@@ -58,6 +60,14 @@ public class Main {
 		} else {                    //Если обьект несериализуемый
 			//проверяем поля обьекта на сериализуемость
 			Field[] fields = clazz.getDeclaredFields();
+			//В случае, если поле не сериализуемо и не имеет своих полей, выбрасываем исключение
+			if (fields.length < 1) {
+				try {
+					throw new NotSerializableException("Field is not serializable and not have fields!");
+				} catch (NotSerializableException e) {
+					throw new RuntimeException(e);
+				}
+			}
 			for (Field field : fields) {
 				field.setAccessible(true);
 				Class<?> clazzField = field.getType();
@@ -88,6 +98,14 @@ public class Main {
 			}
 		} else {
 			Field[] fields = clazz.getDeclaredFields();
+			//В случае, если поле не сериализуемо и не имеет своих полей, выбрасываем исключение
+			if (fields.length < 1) {
+				try {
+					throw new NotSerializableException("Field is not serializable and not have fields!");
+				} catch (NotSerializableException e) {
+					throw new RuntimeException(e);
+				}
+			}
 			for (Field field : fields) {
 				field.setAccessible(true);
 				Class<?> clazzField = field.getType();
